@@ -23,7 +23,6 @@ repositories {
 dependencies {
     // This dependency is used by the application.
     implementation 'com.google.guava:guava:28.1-jre'
-
     implementation 'joda-time:joda-time:2.3'
 
     // Use JUnit test framework

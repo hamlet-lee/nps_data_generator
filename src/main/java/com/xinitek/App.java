@@ -14,6 +14,7 @@ import java.util.Random;
 public class App {
     static DateTimeFormatter formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
     static DateTimeFormatter outFormatter = DateTimeFormat.forPattern("yyyyMMdd_HHmmss");
+    static DateTimeFormatter outFormatterTsv = DateTimeFormat.forPattern("yyyy-MM-dd");
     static DateTime minDt = formatter.parseDateTime("2020-01-01 00:00:00");
     static DateTime maxDt = formatter.parseDateTime("2020-02-28 23:59:59");
     static DateTime ver1_0_1_Dt = formatter.parseDateTime("2020-02-01 23:59:59");
@@ -22,6 +23,8 @@ public class App {
         private int seed;
         private Random random;
         private int id;
+        String curVersion = null;
+
         public User(int seed, int id){
             this.seed = seed;
             this.id = id;
@@ -31,13 +34,12 @@ public class App {
             // 来的时间
             long cPos = Math.abs(random.nextLong() % (maxDt.getMillis() - minDt.getMillis()));
             DateTime comeDt = new DateTime(minDt.getMillis() + cPos);
-            long gPos = Math.abs(random.nextLong() % (maxDt.getMillis() - comeDt.getMillis()));
+            long gPos = Math.abs(random.nextLong() % (maxDt.getMillis() - minDt.getMillis()));
             DateTime goneDt = new DateTime(comeDt.getMillis() + gPos);
             // 用了多少天
             DateTime curDt = new DateTime(comeDt);
 
             // 开始的版本
-            String curVersion = null;
             if(curDt.compareTo(ver1_0_1_Dt) <= 0) {
                 curVersion = "1.0.0";
             } else {
@@ -70,7 +72,7 @@ public class App {
                     curDt = curDt.plus(Math.abs(random.nextLong() % (1000 * 10) ));
                 }
 
-                if( curDt.getMillis() > goneDt.getMillis() ) {
+                if( curDt.getMillis() > goneDt.getMillis() || curDt.getMillis() > maxDt.getMillis()) {
                     break;
                 }
 
@@ -82,9 +84,9 @@ public class App {
                 // event id
                 String eventId = eventIds[random.nextInt(eventIds.length)];
                 if(eventId.equals("score")) {
-                    out(curDt, id, curVersion, eventId, "score", random.nextInt(10) + ".0");
+                    out(curDt, id, curVersion, eventId, "score", genNps() + ".0");
                 }else if(eventId.equals("score_nps")) {
-                    out(curDt, id, curVersion, eventId, "nps", random.nextInt(10) + "");
+                    out(curDt, id, curVersion, eventId, "nps", genNps() + "");
                 }else if(eventId.equals("event_a")) {
                     out(curDt, id, curVersion, eventId, "a_val", random.nextInt(10000) + "");
                 }else {
@@ -93,6 +95,38 @@ public class App {
 
             }
         }
+
+//        static float[] oldVerProbs = {
+//                0.01f, 0.01f, 0.01f, 0.01f, 0.01f,
+//                0.02f, 0.02f, 0.02f, 0.35f, 0.54f };
+//        static float[] newVerProbs = {
+//                0.01f, 0.01f, 0.01f, 0.01f, 0.01f,
+//                0.02f, 0.02f, 0.02f, 0.30f, 0.59f };
+        static float[] oldVerProbs = {
+                0.01f, 0.01f, 0.01f, 0.01f, 0.01f,
+                0.02f, 0.02f, 0.02f, 0.35f, 0.54f };
+        static float[] newVerProbs = {
+                0.01f, 0.01f, 0.01f, 0.01f, 0.01f,
+                0.02f, 0.02f, 0.02f, 0.30f, 0.59f };
+        private int genNps() {
+            if(curVersion.equals("1.0.0")) {
+                return genIntWithProbs(oldVerProbs, random);
+            } else {
+                return genIntWithProbs(newVerProbs, random);
+            }
+        }
+    }
+    private static int genIntWithProbs(float[] probs, Random random) {
+        float f = random.nextFloat();
+        float curF = f;
+        for(int i=0; i<probs.length; i++ ) {
+            if(curF - probs[i] < 0) {
+                return i;
+            } else {
+                curF -= probs[i];
+            }
+        }
+        return probs.length - 1;
     }
 
     static Random random = new Random(1);
@@ -112,15 +146,22 @@ public class App {
                     + key + "=" + val + "\t"
                     + "userid=user" + userId + "\tevent_id=" + eventId);
         }
+        if( eventId.equals("score") || eventId.equals("score_nps")) {
+            psTsv.println(outFormatterTsv.print(curDt) + "\t" + curVersion + "\t" + (int)Float.parseFloat(val));
+        }
     }
     static PrintStream ps = null;
+    static PrintStream psTsv = null;
     public static void main(String[] args) throws FileNotFoundException {
         int numOfUser = 10000;
         ps = new PrintStream("nps_data.txt");
+        psTsv = new PrintStream("nps_data.tsv");
+        psTsv.println("day\tapp_version\tscore");
         for(int i=0; i<numOfUser; i++) {
             User user = new User(i, i);
             user.run();
         }
         ps.close();
+        psTsv.close();
     }
 }
