@@ -1,0 +1,32 @@
+# 解压
+unzip nps_data_sort.zip
+
+# 上传到 HDFS
+hadoop fs -mkdir /tmp/nps_data
+hadoop fs -copyFromLocal nps_data_sort.txt /tmp/nps_data
+
+# 建立 HIVE 表格
+create database if not exists temp;
+create table if not exists temp.ods_nps_data (raw string )
+  STORED AS TEXTFILE;
+
+# 装入数据
+load data inpath '/tmp/nps_data' overwrite into table temp.ods_nps_data;
+
+# 确认数据装入成功
+select * from temp.ods_nps_data limit 10;
+
++----------------------------------------------------+
+|                  ods_nps_data.raw                  |
++----------------------------------------------------+
+| 20200101_000157       EVENT   score=7.0       event_id=score  userid=user3629 |
+| 20200101_000200       EVENT   score=4.0       event_id=score  userid=user3629 |
+| 20200101_000612       EVENT   event_id=event_b        userid=user9594 b_val=706 |
+| 20200101_000613       EVENT   event_id=event_a        userid=user9594 a_val=3502 |
+| 20200101_000616       EVENT   a_val=2445      event_id=event_a        userid=user9594 |
+| 20200101_000621       EVENT   b_val=245       event_id=event_b        userid=user9594 |
+| 20200101_000625       EVENT   nps=4   event_id=score_nps      userid=user9594 |
+| 20200101_000633       EVENT   event_id=score_nps      userid=user9594 nps=1 |
+| 20200101_000639       EVENT   nps=5   event_id=score_nps      userid=user9594 |
+| 20200101_000645       EVENT   score=1.0       userid=user9594 event_id=score |
++----------------------------------------------------+
